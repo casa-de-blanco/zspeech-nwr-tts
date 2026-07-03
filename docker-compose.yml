@@ -1,0 +1,7 @@
+services:
+  zspeech-paul:
+    build: .
+    platform: linux/amd64
+    volumes:
+      - ./output:/output
+    command: ["synth", "Text to speak", "/output/out.wav"]
