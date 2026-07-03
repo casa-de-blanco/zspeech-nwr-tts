@@ -17,12 +17,12 @@ Following ReadSpeaker's 2017 acquisition by HOYA, HOYA folded
 Voiceware/NeoSpeech/VoiceText into the unified ReadSpeaker brand and
 retired the NeoSpeech name — see
 [Wikipedia: NeoSpeech](https://en.wikipedia.org/wiki/NeoSpeech). That's
-why this repo has to reverse-engineer the engine (`CLAUDE.md`) instead of
+why this repo has to reverse-engineer the engine instead of
 just contacting the vendor: there's no vendor left.
 
 ### "New Paul": NWS and EAS
 
-This isn't just some voice — `VT-Paul-M16` is the exact engine NWS's
+`VT-Paul-M16` is the exact engine NWS's
 Broadcast Message Handler (BMH) system adopted as the primary NOAA
 Weather Radio (NWR) voice when it finished replacing the aging
 DECtalk-based Console Replacement System by the end of 2016, per
@@ -47,7 +47,7 @@ data1.cab  data1.hdr  data2.cab
 0x0409.ini  0x0411.ini  0x0412.ini  setup.bmp
 ```
 
-(`.gitignore` already excludes these — don't commit them.)
+(`.gitignore` already excludes these and it is not necessary to commit these files for a local docker build)
 
 Build needs `linux/amd64`. On Apple Silicon, enable Docker Desktop's
 "Use Rosetta for x86/amd64 emulation" (Settings → General) first — plain
