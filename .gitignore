@@ -17,3 +17,6 @@ installer/
 *.log
 *.wav
 build/
+
+# local-only config (registry path, etc.)
+.env

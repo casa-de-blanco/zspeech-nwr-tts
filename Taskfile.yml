@@ -1,7 +1,9 @@
 version: "3"
 
+dotenv: ['.env']
+
 vars:
-  IMAGE: registry.verde.zoe/library/zspeech-paul
+  IMAGE: '{{.IMAGE}}'
   TAG: '{{.TAG | default "1.2.0"}}'
   INSTALLER_DIR: '{{.INSTALLER_DIR | default (joinPath (env "HOME") "Downloads" "NWS Neospeech Paul")}}'
   INSTALLER_FILES: >-

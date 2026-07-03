@@ -12,7 +12,7 @@ Voiceware Co., Ltd. (founded 2000; VoiceText engine first shipped 2001).
 VoiceText used Unit Selection Synthesis — stitching speech together from
 large databases of pre-recorded segments rather than generating it
 neurally, which is why the engine's API centers on a `db_path` install
-directory (see `CLAUDE.md`). Pentax acquired Voiceware in Jan 2006.
+directory. Pentax acquired Voiceware in Jan 2006.
 Following ReadSpeaker's 2017 acquisition by HOYA, HOYA folded
 Voiceware/NeoSpeech/VoiceText into the unified ReadSpeaker brand and
 retired the NeoSpeech name — see
@@ -74,8 +74,7 @@ docker run --rm --platform linux/amd64 -v "$PWD:/output" zspeech-paul synth "Tex
 
 Output: 16-bit PCM WAV, mono, 16kHz, written to `./out.wav` on the host.
 
-Text can include [VTML](CLAUDE.md#vtml--pronunciation-control) tags for
-phoneme overrides, pauses, and prosody, e.g.:
+Text can include VTML tags for phoneme overrides, pauses, and prosody, e.g.:
 
 ```bash
 docker run --rm --platform linux/amd64 -v "$PWD:/output" zspeech-paul synth \
@@ -91,9 +90,3 @@ docker compose up
 
 Edit the text and output filename directly in `docker-compose.yml`'s
 `command:` line. Output lands in `./output/`.
-
-## How it works
-
-See `CLAUDE.md` for the full technical writeup — what `vt_eng.dll`
-actually is, why Wine is unavoidable, how the undocumented C API was
-recovered, and Wine-specific gotchas hit along the way.
