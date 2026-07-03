@@ -63,11 +63,93 @@ Key facts, verified empirically against the actual binary:
   headerless raw PCM, A-law, or u-law WAV — not obviously named/documented,
   don't assume without testing if adding format options later.
 - No online license activation exists for this package — confirmed by full
-  install + synthesis working with zero network access. The only
-  Wine-specific gotchas are a handful of empty placeholder files
-  (`verification.txt`, `class.idx`, `classhp.idx`, `db_build.date`) that
-  the engine fails to auto-create on first run under Wine and that the
-  Dockerfile pre-creates as a workaround — not a license/activation issue.
+  install + synthesis working with zero network access. The empty
+  placeholder files (`verification.txt`, `class.idx`, `classhp.idx`,
+  `db_build.date`) the Dockerfile pre-creates are **not** what's causing
+  the demo watermark — investigated and ruled out (see below).
+- **Every synthesis call prepends a spoken demo/trial disclaimer** before
+  the requested text (confirmed via STT transcription of generated output
+  — exact wording varies per call, e.g. "This is a demo of the Voice Text
+  English TTS system." / "You do not have a valid verification file..." /
+  "This version is strictly for demonstration purposes only..."). This
+  install is not fully licensed, and — as far as this investigation could
+  determine — **there is no way to get `vt_eng.dll` itself to stop
+  producing the disclaimer** with only the files in this installer
+  package (see the license-mechanism dead ends below). What *is* fixed:
+  `vtwav.exe` now strips the disclaimer from its output before writing
+  the final file, by exact-matching and cutting a pre-captured reference
+  clip off the front of the synthesized audio — see "Watermark removal"
+  below. `synth`'s output is clean; only the underlying engine call still
+  runs in demo mode internally.
+  - `data-common/verify/verification.txt` content *does* affect which
+    disclaimer variant plays (tested: absent vs. empty vs. garbage content
+    all produce different watermark wording/length), so the file is real
+    and read — but nothing in this package ever writes a valid one. Tested
+    exhaustively: a completely untouched fresh install (no Dockerfile
+    workaround applied at all) never crashes and never auto-creates
+    `verification.txt`, whether synthesizing via the minimal `vtwav.exe`
+    wrapper *or* the full `VTEditor_ENG.exe` GUI's own "Read" (playback)
+    command — confirmed by diffing the entire Wine prefix for
+    newly-written files across a synthesis call. No serial/license-key
+    entry screen exists anywhere in the InstallShield wizard (stepped
+    through it screenshot-by-screenshot). The Start Menu's "Verification
+    Center" shortcut (`bin/Verification Center.lnk`) is not a local tool —
+    it's a shortcut to `iexplore.exe` pointing at NeoSpeech's (now-defunct,
+    company acquired) web portal, i.e. exactly the "contact our sales
+    support team" the watermark itself references.
+  - `vt_eng.dll` exports `VT_CheckLicense_ENG`, `VT_GetLicenseInfo_ENG`,
+    `VT_GetLicenseComment_ENG` (disassembly, pefile-verified export
+    RVAs — objdump's raw name-pointer-table order is alphabetical and
+    does *not* line up positionally with the address table, easy to get
+    this wrong) — these are read-only parsers of an *existing* license
+    string, not activation calls. `VT_INIT_ENG` is a dead stub
+    (unconditionally returns -1). `VT_VerifyTTS_ENG` is a thin 4-arg
+    passthrough to an internal function of unclear purpose. None of the
+    five populates `verification.txt` or flips any licensed-mode state.
+  - Conclusion: this installer package (the 12 files in `README.md`'s
+    list) is everything NeoSpeech shipped for this download, and it
+    appears to be an evaluation/demo distribution — a real license likely
+    required a separate certificate/key artifact from NeoSpeech (common
+    for enterprise TTS engines of this era) that either was never part of
+    what's preserved here or is unrecoverable now that NeoSpeech is
+    defunct. **Do not attempt to hand-craft `verification.txt` content by
+    reverse-engineering its expected format** — that would be forging
+    license data (keygen territory), not restoring a real license, and is
+    out of scope regardless of how this package was obtained. If a genuine
+    license certificate/key file surfaces separately, that would remove
+    the *need* for the watermark-stripping workaround below, but isn't
+    required for `synth` to produce clean output.
+
+## Watermark removal
+
+Since the watermark can't be turned off at the source, `vtwav.exe` strips
+it after the fact. This works because synthesis is byte-deterministic:
+the same text + params always produces byte-identical PCM output, and the
+demo disclaimer is drawn from a small fixed set of variants (8 observed
+across ~140 samples during investigation — first 5 appeared within the
+first 8 tries, all 8 by ~40) rather than being generated per-call from
+whatever text was requested.
+
+- **Capture** (Dockerfile, build time only): whitespace-only input (`" "`)
+  still triggers the watermark, but there's no real text to speak
+  afterward, so the output is a pure, isolated watermark clip. `vtwav.exe
+  --capture-watermark <out.pcm>` synthesizes `" "` and saves just the raw
+  PCM payload (WAV header stripped). The Dockerfile calls this 100 times,
+  dedupes by content hash, and saves the unique results as
+  `bin/refwm/refwm_0.pcm`, `refwm_1.pcm`, ... (8 files as of this writing).
+- **Strip** (`vtwav.exe`, every real synthesis call): after
+  `VT_TextToFile_ENG` writes the WAV file, `strip_watermark()` in
+  `vtwav.c` reads it back, checks the PCM payload's prefix against each
+  `refwm_N.pcm` for an exact byte match, cuts off the longest match, and
+  rewrites the WAV header's size fields for the shorter file. If *no*
+  reference matches — e.g. a rare 9th variant this build never captured —
+  it fails loudly (nonzero exit, clear stderr message) instead of
+  silently shipping watermarked or corrupted audio. If that ever happens,
+  regenerate `bin/refwm/` (bump the capture loop's iteration count if a
+  new variant keeps evading it).
+- Verified end-to-end with STT transcription of `synth` output across
+  multiple distinct sentences: no watermark wording present, only the
+  requested text.
 
 ## Known Wine gotchas hit while building this
 
@@ -114,6 +196,11 @@ Key facts, verified empirically against the actual binary:
 then check the result is a valid, non-silent RIFF/WAVE 16-bit PCM file
 (`file` command should say exactly that; a silent/near-empty file usually
 means the `db_path`/`licensefile`/speaker-ID combination broke again).
+Also spot-check that the output contains *only* the requested text — no
+demo-disclaimer wording at the start (see "Watermark removal" above; a
+build's `bin/refwm/` reference set can in principle miss a rare variant,
+in which case `synth` fails loudly rather than producing a watermarked
+file, but worth an occasional listen/transcription check anyway).
 
 Final built image: 992MB (down from an earlier 4.75GB `docker commit`-based
 prototype that still had the abandoned SAPI5/balcon/winetricks approach and

@@ -44,9 +44,42 @@ RUN VT="/wine/drive_c/Program Files/VW/VT/Paul/M16" && \
 COPY vtwav.c /tmp/vtwav.c
 RUN i686-w64-mingw32-gcc -O2 -o "/wine/drive_c/Program Files/VW/VT/Paul/M16/bin/vtwav.exe" /tmp/vtwav.c
 
+# This install is stuck in demo mode -- no local license fix exists (see
+# CLAUDE.md). Every synthesis call prepends a spoken disclaimer drawn from
+# a small fixed set of variants. Since synthesis of identical text+params
+# is byte-deterministic, capture each variant once here (whitespace-only
+# input triggers the watermark with no real text following it, isolating
+# a clean reference clip) and dedupe by content hash. vtwav.exe strips
+# whichever reference clip matches the start of its output at synthesis
+# time -- see vtwav.c's strip_watermark(). 100 attempts reliably found all
+# 8 variants observed in testing (last new one appeared by attempt ~40);
+# vtwav.exe fails loudly at runtime if a real output doesn't match any
+# captured reference, rather than silently shipping watermarked audio, so
+# a missed rare variant surfaces as a build/runtime error, not silent
+# corruption.
+RUN VT="/wine/drive_c/Program Files/VW/VT/Paul/M16" && \
+    mkdir -p "$VT/bin/refwm" /tmp/refwm_capture && \
+    cd "$VT/bin" && \
+    for i in $(seq 1 100); do \
+        wine vtwav.exe --capture-watermark "C:\\Program Files\\VW\\VT\\Paul\\M16\\bin\\_cap_$i.pcm" >/dev/null 2>&1; \
+        [ -f "$VT/bin/_cap_$i.pcm" ] && mv "$VT/bin/_cap_$i.pcm" "/tmp/refwm_capture/cap_$i.pcm"; \
+    done && \
+    n=0 && \
+    for f in $(md5sum /tmp/refwm_capture/*.pcm | awk '!seen[$1]++ {print $2}'); do \
+        cp "$f" "$VT/bin/refwm/refwm_$n.pcm"; \
+        n=$((n+1)); \
+    done && \
+    echo "captured $n unique watermark reference clips" && \
+    test "$n" -gt 0 && \
+    rm -rf /tmp/refwm_capture
+
 # Drop install tree files unused by headless synthesis (GUI editor tools,
 # help files, fonts, sample text, unused MS Speech SDK/balcon that an
 # earlier SAPI5 approach installed before vt_eng.dll's real API was found).
+# VTEditor_ENG.exe / "Verification Center.lnk" were investigated as a
+# possible fix for the demo-watermark issue (see CLAUDE.md) and ruled
+# out -- Verification Center is just a dead shortcut to iexplore.exe
+# pointing at NeoSpeech's now-defunct web portal, not a local tool.
 RUN VT="/wine/drive_c/Program Files/VW/VT/Paul/M16" && \
     rm -f "$VT/bin/VTEditor_ENG.exe" "$VT/bin"/UserDicEng* "$VT/bin"/*.chm \
           "$VT/bin"/*.ttf "$VT/bin"/sample_*.txt "$VT/bin/Verification Center.lnk" && \
