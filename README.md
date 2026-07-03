@@ -35,7 +35,7 @@ distinguish it from the original DECtalk-era "Old Paul" nickname.
 ## Requirements
 
 You need your own legally-obtained copy of the `VT-Paul-M16` installer
-(InstallShield package). It is **not included in this repo** — it's
+(NWS Neospeech Paul.zip). It is **not included in this repo** — it's
 proprietary NeoSpeech/VoiceWare software, licensed as a runtime engine
 that (per its own EULA) prohibits redistributing generated audio output
 without a separate agreement. Place these files in the repo root before
