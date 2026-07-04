@@ -1,10 +1,10 @@
 version: "3"
 
-dotenv: ['.env']
+dotenv: [".env"]
 
 vars:
-  IMAGE: '{{.IMAGE}}'
-  TAG: '{{.TAG | default "1.2.0"}}'
+  IMAGE: "{{.IMAGE}}"
+  TAG: '{{.TAG | default "1.3.0"}}'
   VOICE: '{{.VOICE | default "paul"}}'
   INSTALLER_DIR: '{{.INSTALLER_DIR | default (joinPath (env "HOME") "Downloads" "NWS Neospeech Paul")}}'
   INSTALLER_FILES: >-
@@ -20,7 +20,7 @@ vars:
   # Violeta's InstallShield product name carries a "-SAPI5" suffix into its
   # actual install dir (C:\...\VT\Violeta\M16-SAPI5\); Paul's does not.
   VOICE_MODEL: '{{if eq .VOICE "violeta"}}M16-SAPI5{{else}}M16{{end}}'
-  SPEAKER_ID: '1'
+  SPEAKER_ID: "1"
   DLL_NAME: '{{if eq .VOICE "violeta"}}vt_spa_violeta16.dll{{else}}vt_eng.dll{{end}}'
   EXPORT_SUFFIX: '{{if eq .VOICE "violeta"}}SPA{{else}}ENG{{end}}'
   BIN_SUBDIR: '{{if eq .VOICE "violeta"}}lib{{else}}bin{{end}}'
@@ -45,7 +45,7 @@ tasks:
       - test -f {{.VOICE}}/setup.exe
 
   build:
-    desc: 'Build the Docker image (usage: task build VOICE=paul|violeta)'
+    desc: "Build the Docker image (usage: task build VOICE=paul|violeta)"
     cmds:
       - >-
         docker build --platform linux/amd64
