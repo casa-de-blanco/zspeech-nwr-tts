@@ -88,7 +88,7 @@ copy). No interaction needed.
 
 ## Use
 
-One-liner: synthesizes and exits, no daemon/exec/cp dance needed.
+TTS one-liner
 
 ```bash
 docker run --rm --platform linux/amd64 -v "$PWD:/output" zspeech-nwr-tts synth "Text to speak" /output/out.wav
