@@ -5,7 +5,7 @@
 FROM debian:bookworm-slim AS builder
 
 # These describe the NeoSpeech engine install this Dockerfile drives.
-# Verified for two voices so far (see Taskfile.yml for the exact values):
+# Verified for two voices so far (see mise.toml for the exact values):
 # Paul (vt_eng.dll, App_Executables\bin\, English, _ENG exports) and
 # Violeta (vt_spa_violeta16.dll, App_Executables\lib\, Spanish, presumed
 # _SPA exports -- see CLAUDE.md). Not a general N-voice framework, just

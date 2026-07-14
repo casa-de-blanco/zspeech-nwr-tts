@@ -243,9 +243,9 @@ clients incl. WebFetch -- use a browser-UA `curl` to fetch it).
 
 `Dockerfile`/`install-automation.sh`/`synth.sh`/`vtwav.c` take
 `VOICE_DIR`/`VOICE_NAME`/`VOICE_MODEL`/`SPEAKER_ID`/`DLL_NAME`/
-`EXPORT_SUFFIX`/`BIN_SUBDIR`/`EXPECTED_INSTALL_MB` as build args. `Taskfile.yml`
-picks the right values for `task build VOICE=paul` / `VOICE=violeta` — see
-its `vars:` block for the exact values. This is deliberately scoped to
+`EXPORT_SUFFIX`/`BIN_SUBDIR`/`EXPECTED_INSTALL_MB` as build args. `mise.toml`
+picks the right values for `mise run build --voice paul` / `--voice violeta`
+— see its `build` task for the exact values. This is deliberately scoped to
 these two voices, not a speculative N-voice framework: Violeta's package
 turned out to differ from Paul's in more than just naming, discovered by
 directly inspecting its InstallShield cabinets with `unshield`/`strings`
@@ -285,7 +285,7 @@ the installer:
   the real wizard). Found by driving a debug container's installer
   interactively (`xdotool` + `xwd`/`convert` screenshots piped through
   `docker cp`) instead of guessing again — the Destination Folder screen
-  shows the real path directly. `VOICE_MODEL=M16-SAPI5` in `Taskfile.yml`
+  shows the real path directly. `VOICE_MODEL=M16-SAPI5` in `mise.toml`
   reflects this. Note the install's inner `data-violeta/` subtree still
   uses the plain `M16` (no `-SAPI5`) for its nested model dir — the
   Dockerfile's placeholder-touch step strips any `-VOICE_MODEL` suffix

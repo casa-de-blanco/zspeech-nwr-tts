@@ -1,0 +1,145 @@
+[env]
+_.file = ".env"
+
+[tasks.default]
+description = "Build and push the zspeech-nwr-tts image (stages proprietary installer files, builds, pushes, cleans up)"
+usage = '''
+flag "--voice <voice>" default="paul"
+flag "--tag <tag>" default="1.3.0"
+'''
+run = '''
+mise run stage-installer --voice "$usage_voice"
+mise run build --voice "$usage_voice" --tag "$usage_tag"
+mise run push --voice "$usage_voice" --tag "$usage_tag"
+mise run clean-installer --voice "$usage_voice"
+'''
+
+[tasks.stage-installer]
+description = "Copy the proprietary VT-Paul-M16 installer files into the voice subdirectory (gitignored, not committed)"
+usage = '''
+flag "--voice <voice>" default="paul"
+flag "--installer-dir <dir>" default="{{env.HOME}}/Downloads/NWS Neospeech Paul"
+'''
+run = '''
+if [ -f "$usage_voice/setup.exe" ]; then
+  echo "$usage_voice/setup.exe already staged, skipping"
+else
+  mkdir -p "$usage_voice"
+  for f in setup.exe ISSetup.dll layout.bin setup.ini setup.inx \
+           data1.cab data1.hdr data2.cab \
+           0x0409.ini 0x0411.ini 0x0412.ini setup.bmp; do
+    cp "$usage_installer_dir/$f" "$usage_voice/"
+  done
+fi
+'''
+
+[tasks.build]
+description = "Build the Docker image (usage: mise run build --voice paul|violeta)"
+usage = '''
+flag "--voice <voice>" default="paul"
+flag "--tag <tag>" default="1.3.0"
+'''
+run = '''
+# Re-derived every call (not hoisted to [env]) so that calling `build` twice
+# with different --voice in one chain (see `test`/`test-voice`) can't reuse
+# a stale value from an earlier invocation in the same process.
+#
+# Only two voices are actually supported (not a general framework) -- see
+# CLAUDE.md for how these values were determined (Violeta's values were
+# confirmed by interactively driving its installer with screenshots, since a
+# blind first build attempt failed against wrong guesses). SPEAKER_ID is the
+# same for both so far, no per-voice branch needed.
+case "$usage_voice" in
+  violeta)
+    VOICE_NAME=Violeta
+    # Violeta's InstallShield product name carries a "-SAPI5" suffix into
+    # its actual install dir (C:\...\VT\Violeta\M16-SAPI5\); Paul's does not.
+    VOICE_MODEL=M16-SAPI5
+    DLL_NAME=vt_spa_violeta16.dll
+    EXPORT_SUFFIX=SPA
+    BIN_SUBDIR=lib
+    # Real install size confirmed at 698MB -- 700 would never be satisfied.
+    EXPECTED_INSTALL_MB=690
+    ;;
+  *)
+    VOICE_NAME=Paul
+    VOICE_MODEL=M16
+    DLL_NAME=vt_eng.dll
+    EXPORT_SUFFIX=ENG
+    BIN_SUBDIR=bin
+    EXPECTED_INSTALL_MB=480
+    ;;
+esac
+SPEAKER_ID=1
+
+IMAGE_TAG="$IMAGE"
+if [ "$usage_voice" != "paul" ]; then
+  IMAGE_TAG="$IMAGE-$usage_voice"
+fi
+
+docker build --platform linux/amd64 \
+  --build-arg VOICE_DIR="$usage_voice" \
+  --build-arg VOICE_NAME="$VOICE_NAME" \
+  --build-arg VOICE_MODEL="$VOICE_MODEL" \
+  --build-arg SPEAKER_ID="$SPEAKER_ID" \
+  --build-arg DLL_NAME="$DLL_NAME" \
+  --build-arg EXPORT_SUFFIX="$EXPORT_SUFFIX" \
+  --build-arg BIN_SUBDIR="$BIN_SUBDIR" \
+  --build-arg EXPECTED_INSTALL_MB="$EXPECTED_INSTALL_MB" \
+  -t "$IMAGE_TAG:$usage_tag" .
+'''
+
+[tasks.push]
+description = "Push the Docker image"
+usage = '''
+flag "--voice <voice>" default="paul"
+flag "--tag <tag>" default="1.3.0"
+'''
+run = '''
+IMAGE_TAG="$IMAGE"
+if [ "$usage_voice" != "paul" ]; then
+  IMAGE_TAG="$IMAGE-$usage_voice"
+fi
+docker push "$IMAGE_TAG:$usage_tag"
+'''
+
+[tasks.test]
+description = "Build paul and violeta images and verify each produces valid, non-silent synthesized audio (e2e)"
+usage = '''
+flag "--tag <tag>" default="1.3.0"
+'''
+run = '''
+for v in paul violeta; do
+  mise run test-voice --voice "$v" --tag "$usage_tag"
+done
+'''
+
+[tasks.test-voice]
+description = "Build one voice image and verify its synth output (internal helper, use `mise run test`)"
+hide = true
+usage = '''
+flag "--voice <voice>" default="paul"
+flag "--tag <tag>" default="1.3.0"
+'''
+run = '''
+mise run build --voice "$usage_voice" --tag "$usage_tag"
+
+IMAGE_TAG="$IMAGE"
+if [ "$usage_voice" != "paul" ]; then
+  IMAGE_TAG="$IMAGE-$usage_voice"
+fi
+bash verify-synth.sh "$IMAGE_TAG:$usage_tag" "$usage_voice"
+'''
+
+[tasks.clean-installer]
+description = "Remove the staged proprietary installer files (moves to Trash, not permanent delete)"
+usage = '''
+flag "--voice <voice>" default="paul"
+'''
+run = '''
+if [ -d "$usage_voice" ]; then
+  trash "$usage_voice"
+else
+  echo "$usage_voice/ not present, nothing to clean"
+fi
+'''

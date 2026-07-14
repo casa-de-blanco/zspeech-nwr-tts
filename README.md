@@ -69,7 +69,7 @@ package installs.
 ## Build
 
 ```bash
-task build VOICE=paul      # or VOICE=violeta
+mise run build --voice paul      # or --voice violeta
 ```
 
 or directly:
@@ -78,9 +78,9 @@ or directly:
 docker build --platform linux/amd64 -t zspeech-nwr-tts .
 ```
 
-(the raw `docker build` form defaults to Paul's build args; use `task
+(the raw `docker build` form defaults to Paul's build args; use `mise run
 build` for Violeta so the right `--build-arg` values get passed — see
-`Taskfile.yml`.)
+`mise.toml`.)
 
 This runs a one-time automated InstallShield install (via Xvfb + fluxbox +
 xdotool) inside the build, so it takes a while (large voice database
